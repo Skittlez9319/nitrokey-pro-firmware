@@ -35,6 +35,7 @@
 # Cmd interface paramenters
 VID?=0x20a0
 PID?=0x4108
+HW_REV?=4
 BUILD_DEBUG?=0
 
 ###########################################
@@ -66,13 +67,12 @@ RUN_MODE=ROM_RUN
 
 
 # Target file name (without extension).
-TARGET = nitrokey-pro-firmware
+TARGET = nitrokey-pro-firmware-hw$(HW_REV)
 
 # List C source files here. (C dependencies are automatically generated.)
 # use file-extension c for "c-only"-files
 SRC = 		../../src/main.c                                         \
 			../../src/hw_config.c                                         \
-			../../src/stack_protector.c                                         \
 			../../src/test_code.c                                         \
 			../../src/utils/delays.c	\
 			../../src/utils/memory_ops.c			\
@@ -213,7 +213,7 @@ EXTRA_LIBDIRS =
 CSTANDARD = -std=gnu99
 
 # Place -D or -U options for C here
-CDEFS =  -D$(RUN_MODE) -DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DUSE_STM3210E_EVAL -DGLOBAL_VID=$(VID) -DGLOBAL_PID=$(PID) -DBUILD_DEBUG=$(BUILD_DEBUG)
+CDEFS =  -D$(RUN_MODE) -DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DUSE_STM3210E_EVAL -DGLOBAL_VID=$(VID) -DGLOBAL_PID=$(PID) -DHW_REV=$(HW_REV) -DBUILD_DEBUG=$(BUILD_DEBUG)
 #CDEFS =  -D$(RUN_MODE) -DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD -DUSE_BOARD_STICK_V12
 # Place -I options here
 CINCS =
@@ -238,7 +238,7 @@ endif
 CFLAGS = -g$(DEBUG)
 CFLAGS += $(CDEFS) $(CINCS)
 CFLAGS += -O$(OPT)
-#CFLAGS_OUR_SRC += -Werror
+CFLAGS_OUR_SRC += -Werror
 # CFLAGS_OUR_SRC += -Wextra
 CFLAGS += -Wall -Wcast-align -Wimplicit
 CFLAGS += -Wpointer-arith -Wswitch
@@ -263,12 +263,10 @@ CFLAGS += -Wno-cast-qual
 # extra diagnostic
 #CFLAGS += -Wconversion -fno-common -Wdouble-promotion -Wshadow -Wpadded
 #CFLAGS += -fstack-usage & -Wstack-usage=
-CFLAGS += -fstack-protector-all
-CFLAGS += -nostdlib -nodefaultlibs
 ifeq ($(BUILD_DEBUG), 1)
 #CFLAGS += -fdata-sections # makes CCID not working
 CFLAGS += -ffunction-sections
-CFLAGS += -mno-unaligned-access
+#CFLAGS += -fstack-protector-all
 endif
 #CFLAGS += -funwind-tables
 #CFLAGS += -fno-unwind-tables -fno-exceptions
@@ -306,19 +304,16 @@ MATH_LIB = -lm
 #  -Wl,...:     tell GCC to pass this to linker.
 #    -Map:      create map file
 #    --cref:    add cross reference to  map file
-LDFLAGS += -specs=nosys.specs
 LDFLAGS = -nostartfiles -Wl,-Map=$(TARGET).map,--cref
-#LDFLAGS += -lc
+LDFLAGS += -lc
 LDFLAGS += $(NEWLIBLPC) $(MATH_LIB)
-#LDFLAGS += -lc -lgcc
-#LDFLAGS += -lrdimon
+LDFLAGS += -lc -lgcc 
+LDFLAGS += -lrdimon
 LDFLAGS += $(CPLUSPLUS_LIB)
 LDFLAGS += $(patsubst %,-L%,$(EXTRA_LIBDIRS))
 LDFLAGS += $(patsubst %,-l%,$(EXTRA_LIBS))
 LDFLAGS += -Wl,--print-memory-usage
-#LDFLAGS += -Wl,--print-gc-sections
-LDFLAGS += -Wl,-nostdlib
-#LDFLAGS += -Wl,-nodefaultlibs
+LDFLAGS += -Wl,--print-gc-sections
 
 ifeq ($(BUILD_DEBUG), 1)
 LDFLAGS += -Wl,--gc-sections
@@ -529,15 +524,13 @@ endif
 	@echo
 	@echo $(MSG_LINKING) $@
 	$(CC) $(THUMB) $(ALL_CFLAGS) $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) --output $@ $(LDFLAGS)
-	pwd
-	-ls -lh $@
 	ln -sf $@ last.elf
 
 #	$(CPP) $(THUMB) $(ALL_CFLAGS) $(AOBJARM) $(AOBJ) $(COBJARM) $(COBJ) $(CPPOBJ) $(CPPOBJARM) --output $@ $(LDFLAGS)
 
 $(TARGET).buildinfo:
 	date > $@
-	$(CC) --version | tee -a $@
+	$(CC) --version >> $@
 	-git describe --long >> $@
 	-git describe --long --all >> $@
 	@echo CC=$(CC) >> $@

@@ -28,7 +28,6 @@
 #include "CCID_Global.h"
 #include "CCID_usb.h"
 #include "hw_config.h"
-#include "hw_config_rev4.h"
 
 /* Private typedef ----------------------------------------------------------- */
 /* Private define ------------------------------------------------------------ */
@@ -36,8 +35,6 @@
 /* Private variables --------------------------------------------------------- */
 /* Global variables definition and initialization ---------------------------- */
 SC_ATR SC_A2R;
-
-volatile SC_REQ_SOURCE g_scReqSource = REQ_SRC_UNKNOWN;
 
 u8 SC_ATR_Table[40];
 
@@ -89,10 +86,7 @@ vu8 IMSI_Content[9] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
 
 // SC_State SCState = SC_POWER_OFF;
 
-static struct HardwareDefinition const * l_sc_current_hardware = NULL;
-void set_hardware_for_smartcard(void){
-    l_sc_current_hardware = detect_hardware();
-}
+
 
 /*******************************************************************************
 * Function Name  : RCC_Configuration
@@ -509,7 +503,7 @@ int SC_PTSConfig (void)
     /* Reconfigure the USART Baud Rate ------------------------------------------- */
     RCC_GetClocksFreq (&RCC_ClocksStatus);
 
-    apbclock = SMARTCARD_PCLK_STATUS_FREQ(&RCC_ClocksStatus);
+    apbclock = SMARTCARD_PCLK_STATUS_FREQ;
     apbclock /= ((SMARTCARD_USART->GTPR & (u16) 0x00FF) * 2);
     /* Enable the DMA Receive (Set DMAR bit only) to enable interrupt generation in case of a framing error FE */
     USART_DMACmd (SMARTCARD_USART, USART_DMAReq_Rx, ENABLE);
@@ -1358,7 +1352,7 @@ int CRD_SendCommand (unsigned char* pTransmitBuffer, unsigned int nCommandSize, 
         // checked)
     {
         nDelayTime = SC_Receive_Timeout;
-        if (0 == i && g_scReqSource != REQ_SRC_INTERNAL)
+        if (0 == i)
         {
             nDelayTime = SC_Receive_Timeout * 10000L;   // Long long wait for
             // first byte, allow
